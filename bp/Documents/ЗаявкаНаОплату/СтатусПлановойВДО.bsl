@@ -35,7 +35,7 @@
 	ПараметрыПодключения.Вставить("Пользователь", "Администратор");
 	ПараметрыПодключения.Вставить("Пароль", "");
 	
-	Путь = "/doc_akea/hs/FromBuhStatus/DownloadPlanStatus";
+	Путь = "/doc_akea/hs/FromBuhStatus/DownloadStatus";
 	
 	Попытка
 		
