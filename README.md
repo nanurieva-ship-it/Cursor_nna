@@ -22,9 +22,10 @@
 |-----|------|
 | Статья ДДС БП → ДО | `bp/Catalogs/СтатьиДвиженияДенежныхСредств/ПриЗаписи.bsl`, `do/HTTPServices/ImportNSIDO/Module.bsl` |
 | Контрагент ДО → БП (не включать без Максима) | `do/Catalogs/Контрагенты/ПриЗаписи.bsl`, `bp/HTTPServices/ImportNSIBP/Module.bsl` |
-| Плановая заявка, лимит и выгрузка | `do/Forms/ПлановаяЗаявка/МодульФормы.bsl` |
-| Приём заявки, в т.ч. плановой | `bp/HTTPServices/ImportFromDO/Module.bsl` |
-| Статус из БП → ДО | `do/FromBuhStatus.bsl` (HTTP-сервис, не форма) |
+| Плановая заявка, лимит и выгрузка | `do/FormExtension.bsl` |
+| Приём заявки, 5% автоодобрение счёта | `bp/HTTPServices/ImportFromDO/Module.bsl` |
+| Статус и оплата из БП → ДО | `do/FromBuhStatus.bsl` (HTTP-сервис, не форма) |
+| Оплата заявки → Исполнен в ДО | `bp/Documents/ЗаявкаНаОплату/ПриЗаписи.bsl`, форма `ОтправкаСтатусаВДО.bsl` |
 
 Роль на статьи в БП: `ак_ФУПолныйДоступ`. Вид «Плановая заявка»: `0f8f6296-ba4a-11f1-a615-9c69b465b0dd`.
 
