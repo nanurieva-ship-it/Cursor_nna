@@ -63,7 +63,7 @@
 | Статья ДДС | ссылка, код из БП |
 | Сумма | Число 15.2 |
 | СверхЛимит | Булево |
-| Назначение / НазначениеПлатежа | String on the planned form (Содержание); sent to the BP request |
+| Назначение | Object attribute from the DO extension (not the extra property «Назначение платежа»). Invoice copies it from the planned request |
 | ИдентификаторДО | UUID ссылки |
 
 Поток:
