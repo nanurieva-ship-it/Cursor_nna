@@ -211,7 +211,7 @@
 	
 	Попытка
 		HTTPСоединение = Новый HTTPСоединение("1c.sah18.ru", 59795, "Администратор", "12345678", , , Новый ЗащищенноеСоединениеOpenSSL);
-		ЗапросPOST = Новый HTTPЗапрос("/doc_akea/hs/FromBuhStatus/DownloadStatus");
+		ЗапросPOST = Новый HTTPЗапрос(ПутьDownloadStatusДО());
 		ЗапросPOST.Заголовки.Вставить("Content-Type", "application/json; charset=utf-8");
 		ЗапросPOST.УстановитьТелоИзСтроки(СтрокаJSON, "UTF-8", ИспользованиеByteOrderMark.НеИспользовать);
 		Результат = HTTPСоединение.ОтправитьДляОбработки(ЗапросPOST);
@@ -223,6 +223,16 @@
 	КонецПопытки;
 	
 КонецПроцедуры
+
+Функция ПутьDownloadStatusДО()
+	
+	СтрокаСоединения = НРег(СтрокаСоединенияИнформационнойБазы());
+	Если СтрНайти(СтрокаСоединения, "sah_buh_akea") > 0 Тогда
+		Возврат "/doc_akea/hs/FromBuhStatus/DownloadStatus";
+	КонецЕсли;
+	Возврат "/eaa84ff6-eeb3-43f5-b89f-0308be2a7375/hs/FromBuhStatus/DownloadStatus";
+	
+КонецФункции
 
 Функция ЭтоСтатусОплатыЗаявки(СтатусЗаявки)
 	
@@ -283,7 +293,7 @@
 	
 	Попытка
 		HTTPСоединение = Новый HTTPСоединение("1c.sah18.ru", 59795, "Администратор", "12345678", , , Новый ЗащищенноеСоединениеOpenSSL);
-		ЗапросPOST = Новый HTTPЗапрос("/doc_akea/hs/FromBuhStatus/DownloadStatus");
+		ЗапросPOST = Новый HTTPЗапрос(ПутьDownloadStatusДО());
 		ЗапросPOST.Заголовки.Вставить("Content-Type", "application/json; charset=utf-8");
 		ЗапросPOST.УстановитьТелоИзСтроки(СтрокаJSON, "UTF-8", ИспользованиеByteOrderMark.НеИспользовать);
 		Результат = HTTPСоединение.ОтправитьДляОбработки(ЗапросPOST);
@@ -345,7 +355,7 @@
 	
 	Попытка
 		HTTPСоединение = Новый HTTPСоединение("1c.sah18.ru", 59795, "Администратор", "12345678", , , Новый ЗащищенноеСоединениеOpenSSL);
-		ЗапросPOST = Новый HTTPЗапрос("/doc_akea/hs/FromBuhStatus/DownloadStatus");
+		ЗапросPOST = Новый HTTPЗапрос(ПутьDownloadStatusДО());
 		ЗапросPOST.Заголовки.Вставить("Content-Type", "application/json; charset=utf-8");
 		ЗапросPOST.УстановитьТелоИзСтроки(СтрокаJSON, "UTF-8", ИспользованиеByteOrderMark.НеИспользовать);
 		Результат = HTTPСоединение.ОтправитьДляОбработки(ЗапросPOST);
