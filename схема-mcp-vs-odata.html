@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Как агент подключается к 1С: MCP, не OData</title>
+<style>
+  :root { --bg:#f6f4ef; --ink:#1c1917; --muted:#57534e; --line:#d6d3d1; --card:#fff; --accent:#1d4ed8; --ok:#166534; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:980px; margin:0 auto; padding:32px 24px 64px; }
+  h1 { font-size:24px; font-weight:650; margin:0 0 8px; }
+  h2 { font-size:18px; margin:32px 0 12px; }
+  p.lead { color:var(--muted); margin:0 0 24px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:28px; }
+  .stat { background:var(--card); border:1px solid var(--line); padding:14px 16px; }
+  .stat b { display:block; font-size:18px; }
+  .stat span { color:var(--muted); font-size:13px; }
+  .flow { display:flex; flex-wrap:wrap; align-items:stretch; gap:0; }
+  .box { width:148px; background:var(--card); border:1px solid var(--line); padding:10px 12px; }
+  .box.accent { border-color:var(--accent); }
+  .box.ok { border-color:var(--ok); }
+  .box strong { display:block; font-size:13px; }
+  .box small { color:var(--muted); font-size:12px; }
+  .arrow { display:flex; align-items:center; padding:0 6px; color:var(--muted); font-size:20px; }
+  .note { background:#eff6ff; border:1px solid #bfdbfe; padding:12px 14px; margin:20px 0; font-size:14px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); font-size:13px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#e7e5e4; font-weight:600; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+  .card { background:var(--card); border:1px solid var(--line); padding:14px 16px; }
+  .card h3 { margin:0 0 8px; font-size:15px; }
+  .pills span { display:inline-block; border:1px solid var(--line); padding:4px 8px; margin:4px 6px 0 0; font-size:13px; }
+  .cap { color:var(--muted); font-size:12px; margin-top:24px; }
+  @media (max-width:800px) { .stats, .two { grid-template-columns:1fr; } .flow { flex-direction:column; } .arrow { transform:rotate(90deg); } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Как я подключаюсь к 1С и пишу код</h1>
+  <p class="lead">Да — через <b>MCP</b> (MCP:RSV Data). Это не OData и не COM. MCP только читает базу; код модулей я пишу в файл на диске.</p>
+  <div class="stats">
+    <div class="stat"><b>MCP</b><span>канал к 1С</span></div>
+    <div class="stat"><b>Только чтение</b><span>config, query, структура</span></div>
+    <div class="stat"><b>Локальный .bsl</b><span>в конфигуратор — вручную</span></div>
+  </div>
+  <h2>Цепочка</h2>
+  <div class="flow">
+    <div class="box"><strong>Вы в чате</strong><small>заполни график в заявке</small></div>
+    <div class="arrow">→</div>
+    <div class="box accent"><strong>Агент Cursor</strong><small>инструменты MCP</small></div>
+    <div class="arrow">→</div>
+    <div class="box accent"><strong>MCP:RSV Data</strong><small>config / describe / query</small></div>
+    <div class="arrow">→</div>
+    <div class="box"><strong>HTTP-сервис расширения</strong><small>RSVData в ИБ</small></div>
+    <div class="arrow">→</div>
+    <div class="box ok"><strong>1С: база</strong><small>чтение, не запись</small></div>
+  </div>
+  <p class="lead" style="margin-top:12px">От агента отдельно: <b>файл .bsl</b> на диск. В HTTP 1С этот код не уходит.</p>
+  <div class="note">В базе стоит расширение RSVData 1.3.0. Инструменты: config, describe, get_structure, query, execute_query (язык запросов 1С), reveal. Проведение документов и правка модулей конфигурации недоступны.</div>
+  <h2>Почему не OData</h2>
+  <table>
+    <thead><tr><th>Задача агента</th><th>MCP:RSV Data</th><th>OData</th></tr></thead>
+    <tbody>
+      <tr><td>Что за конфигурация</td><td>Один вызов config</td><td>Нет паспорта, только огромный $metadata</td></tr>
+      <tr><td>Найти «заявку»</td><td>describe по подстроке и синонимам</td><td>Имена вида Document_ФУ_ЗаявкаНаОплату</td></tr>
+      <tr><td>Структура ТЧ ГрафикПлатежей</td><td>get_structure: поля, типы, перечисления</td><td>EDMX + угадывание навигации</td></tr>
+      <tr><td>Группировки, соединения</td><td>Нативный ВЫБРАТЬ 1С</td><td>$filter / $expand, нет виртуальных таблиц регистров</td></tr>
+      <tr><td>Персональные данные</td><td>Анонимизация + reveal</td><td>Сырой JSON, если сервис открыт</td></tr>
+      <tr><td>Запись кода в конфигурацию</td><td>Не пишет — только .bsl</td><td>Тоже не пишет модули, только CRUD сущностей</td></tr>
+    </tbody>
+  </table>
+  <div class="two">
+    <div class="card">
+      <h3>MCP — для этой работы</h3>
+      <p>Уже настроен в Cursor (user-rsv-data), расширение в ИБ активно. Агент вызывает инструменты по схеме, без ручной сборки URL.</p>
+      <p>Цепочка: describe → Документ.ФУ_ЗаявкаНаОплату → get_structure → query по ГрафикПлатежей → процедуры на языке 1С.</p>
+    </div>
+    <div class="card">
+      <h3>OData — для интеграций</h3>
+      <p>Публикация HTTP 1С для Excel, Power BI, сайта. Нужны IIS/Apache, пользователь, права. Для разбора метаданных агенту неудобнее и обычно шире открыт, чем нужно.</p>
+    </div>
+  </div>
+  <h2>Через MCP я не делаю</h2>
+  <div class="pills">
+    <span>не провожу документы</span>
+    <span>не пишу модули в ИБ</span>
+    <span>не меняю конфигурацию</span>
+  </div>
+  <p class="cap">Источник: MCP user-rsv-data · 15.09.2026</p>
+</main>
+</body>
+</html>

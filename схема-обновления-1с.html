@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Обновление типовой 1С на поддержке</title>
+  <style>
+    :root {
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #e7e5e4;
+      --paper: #fafaf9;
+      --card: #ffffff;
+      --accent: #0f766e;
+      --accent-soft: #ccfbf1;
+      --warn: #b45309;
+      --warn-soft: #ffedd5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 64px; }
+    h1 { font-size: 28px; font-weight: 650; letter-spacing: -0.03em; margin: 0 0 8px; }
+    .lead { color: var(--muted); font-size: 16px; line-height: 1.5; margin: 0 0 28px; max-width: 72ch; }
+    h2 { font-size: 18px; margin: 36px 0 14px; font-weight: 650; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 8px; }
+    @media (max-width: 800px) { .stats { grid-template-columns: 1fr 1fr; } }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .stat b { display: block; font-size: 22px; letter-spacing: -0.03em; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .pipe {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      align-items: stretch;
+    }
+    @media (max-width: 900px) { .pipe { grid-template-columns: 1fr 1fr; } }
+    .step {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 132px;
+      position: relative;
+    }
+    .step .n {
+      font-size: 11px;
+      font-weight: 650;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .step h3 { margin: 6px 0 4px; font-size: 15px; }
+    .step p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .chip {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 650;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .chip.warn { background: var(--warn-soft); color: var(--warn); }
+    .loop {
+      display: grid;
+      grid-template-columns: 1fr 16px 1fr 16px 1fr;
+      gap: 0;
+      align-items: center;
+    }
+    @media (max-width: 800px) { .loop { grid-template-columns: 1fr; } .loop .arr { display: none; } }
+    .loop .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .arr { text-align: center; color: var(--accent); font-size: 20px; }
+    .bar { height: 18px; border-radius: 9px; overflow: hidden; display: flex; background: var(--line); }
+    .bar i { display: block; height: 100%; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .legend u { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+    th, td { text-align: left; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    tr:last-child td { border-bottom: 0; }
+    .foot { margin-top: 28px; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Типовая база на поддержке: как обновляем</h1>
+    <p class="lead">Не MCP и не OData. Штатный конфигуратор 1С: файл обновления поставщика (CFU), затем обработчики в предприятии. Скрипт на 192.168.80.15, база на кластере servsql.</p>
+
+    <div class="stats">
+      <div class="stat"><b>~10–25 мин</b><span>один «короткий» шаг CFU (ЗУП 38.92: 9 мин)</span></div>
+      <div class="stat"><b>~70 мин</b><span>цепочка БП из 4 шагов, 14.09.2026</span></div>
+      <div class="stat"><b>40%</b><span>сложности — отложенные обработчики</span></div>
+      <div class="stat"><b>часы</b><span>если не ждать COM и закрыть окно рано</span></div>
+    </div>
+
+    <h2>Сквозной процесс</h2>
+    <div class="pipe">
+      <div class="step"><div class="n">01 · 5%</div><h3>Вход</h3><p>Сервер, имя базы, пользователь 1С</p><div class="chip">~10 с</div></div>
+      <div class="step"><div class="n">02 · 8%</div><h3>Кто мы</h3><p>COM читает имя и версию конфигурации</p><div class="chip">20–40 с</div></div>
+      <div class="step"><div class="n">03 · 12%</div><h3>Цепочка CFU</h3><p>От текущей до последнего релиза по 1cv8upd.htm</p><div class="chip">1–15 мин*</div></div>
+      <div class="step"><div class="n">04 · 70%</div><h3>Цикл релизов</h3><p>Конфигуратор + предприятие на каждый шаг</p><div class="chip warn">основное время</div></div>
+      <div class="step"><div class="n">05 · 3%</div><h3>Проверка</h3><p>COM: финальная версия</p><div class="chip">~30 с</div></div>
+      <div class="step"><div class="n">06 · 2%</div><h3>Финиш</h3><p>Закрыть только сеанс этой базы</p><div class="chip">~5 с</div></div>
+    </div>
+    <p class="foot">*Скачивание пакета с ИТС — разово, дальше CFU уже в шаблонах.</p>
+
+    <h2>Один релиз (внутри цикла)</h2>
+    <div class="loop">
+      <div class="card">
+        <div class="n" style="color:var(--accent);font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase">Конфигурация</div>
+        <h3 style="margin:8px 0 6px;font-size:16px">Запрет регзаданий → конфигуратор</h3>
+        <p style="margin:0;color:var(--muted);font-size:14px;line-height:1.45">Установка CFU, затем DESIGNER /UpdateCfg и /UpdateDBCfg. Без этого фоновые задания ломают исключительную блокировку.</p>
+        <div class="chip">~5–20 мин · сложность 35%</div>
+      </div>
+      <div class="arr">→</div>
+      <div class="card">
+        <div class="n" style="color:var(--accent);font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase">Данные</div>
+        <h3 style="margin:8px 0 6px;font-size:16px">Снять запрет → предприятие</h3>
+        <p style="margin:0;color:var(--muted);font-size:14px;line-height:1.45">Легальность через COM. /C ЗапуститьОбновлениеИБ. Регзадания уже разрешены — иначе отложенные обработчики не идут.</p>
+        <div class="chip warn">5 мин — несколько часов · 40%</div>
+      </div>
+      <div class="arr">→</div>
+      <div class="card">
+        <div class="n" style="color:var(--accent);font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase">Контроль</div>
+        <h3 style="margin:8px 0 6px;font-size:16px">Ждать COM, не idle</h3>
+        <p style="margin:0;color:var(--muted);font-size:14px;line-height:1.45">Закрывать окно только когда обновление ИБ не требуется и отложенное завершено. При EF_* — удалить расширение и повторить.</p>
+        <div class="chip">сложность 15%</div>
+      </div>
+    </div>
+
+    <h2>Где трудоёмкость</h2>
+    <div class="bar" title="Доли сложности / риска, не доли минут">
+      <i style="width:5%;background:#a8a29e"></i>
+      <i style="width:8%;background:#78716c"></i>
+      <i style="width:12%;background:#0d9488"></i>
+      <i style="width:35%;background:#0f766e"></i>
+      <i style="width:40%;background:#b45309"></i>
+    </div>
+    <div class="legend">
+      <span><u style="background:#a8a29e"></u>Вход 5%</span>
+      <span><u style="background:#78716c"></u>COM-версия 8%</span>
+      <span><u style="background:#0d9488"></u>Цепочка CFU 12%</span>
+      <span><u style="background:#0f766e"></u>Конфигуратор 35%</span>
+      <span><u style="background:#b45309"></u>Обработчики ИБ 40%</span>
+    </div>
+    <p class="foot">Проценты — оценка сложности и риска сбоя, не доля минут. По времени почти всё съедают конфигуратор и обработчики.</p>
+
+    <h2>Факт: Бухгалтерия 14.09.2026, agashin_zup_copy</h2>
+    <table>
+      <thead>
+        <tr><th>Шаг</th><th>Релиз</th><th>Время</th><th>Минут</th><th>Доля прогона</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>3.0.196.21</td><td>11:41–11:51</td><td>10</td><td>14%</td></tr>
+        <tr><td>2</td><td>3.0.200.23</td><td>11:51–12:12</td><td>21</td><td>30%</td></tr>
+        <tr><td>3</td><td>3.0.205.17</td><td>12:12–12:35</td><td>23</td><td>32% · ещё EF_188</td></tr>
+        <tr><td>4</td><td>3.0.206.19</td><td>12:35–12:50</td><td>15</td><td>21%</td></tr>
+        <tr><td></td><td><b>Итого до 3.0.206.19</b></td><td>11:40–12:51</td><td><b>71</b></td><td>100% скрипта; отложенные потом догонялись в окне 1С</td></tr>
+      </tbody>
+    </table>
+    <p class="foot">ЗУП 3.1.38.69 → 3.1.38.92 в тот же день: 10:12–10:21, 9 минут на один шаг.</p>
+  </div>
+</body>
+</html>
