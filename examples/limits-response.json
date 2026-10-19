@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "overLimit": true,
+  "message": "Превышен лимит по статье Оплата товара: заявка 25000, остаток 10000",
+  "limits": [
+    {
+      "articleCode": "00-000012",
+      "articleName": "Оплата товара",
+      "limitAmount": 100000.0,
+      "spentAmount": 90000.0,
+      "requestAmount": 25000.0,
+      "remainder": 10000.0,
+      "overLimit": true
+    }
+  ]
+}
