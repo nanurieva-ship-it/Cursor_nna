@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Автообновление типовой 1С — контур агента</title>
+<style>
+  :root { --bg:#f7f5f2; --ink:#1c1917; --muted:#57534e; --line:#d6d3d1; --card:#fff; --acc:#0f766e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:920px; margin:0 auto; padding:32px 24px 64px; }
+  h1 { font-size:24px; font-weight:650; margin:0 0 8px; }
+  h2 { font-size:17px; margin:28px 0 10px; }
+  p, li { margin:0 0 8px; }
+  .lead { color:var(--muted); max-width:78ch; }
+  code { font:13px/1.4 Consolas, monospace; background:#e7e5e4; padding:1px 5px; }
+  .pipe { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .step { background:var(--card); border:1px solid var(--line); padding:12px; }
+  .step .n { font-size:11px; font-weight:650; color:var(--acc); letter-spacing:.04em; text-transform:uppercase; }
+  .step h3 { margin:6px 0 4px; font-size:14px; }
+  .step p { margin:0; color:var(--muted); font-size:13px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .card { background:var(--card); border:1px solid var(--line); padding:12px 14px; }
+  .card h3 { margin:0 0 6px; font-size:14px; }
+  .card p { margin:0; color:var(--muted); font-size:13px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:#e7e5e4; }
+  pre { background:#1c1917; color:#e7e5e4; padding:12px 14px; font:12px/1.45 Consolas, monospace; overflow-x:auto; margin:10px 0; }
+  .note { border:1px solid var(--line); background:var(--card); padding:10px 12px; font-size:13px; color:var(--muted); }
+  .cap { font-size:12px; color:var(--muted); margin-top:24px; }
+  @media (max-width:800px) { .pipe,.two { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Автообновление типовой на поддержке</h1>
+  <p class="lead">Контур агента Cursor: не MCP:RSV Data и не OData. Штатная цепочка поставщика: <code>CFU → DESIGNER /UpdateCfg + /UpdateDBCfg → ENTERPRISE</code> обработчики ИБ. Оркестратор — <code>update_1c_universal.ps1</code> на <code>192.168.80.15</code>, ИБ на кластере <code>servsql</code>.</p>
+
+  <h2>Граница ответственности</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Агент не делает</h3>
+      <p>Не правит cf/cfe в EDT. Не ходит в ИБ через HTTP MCP. Не жмёт UI легальности (UIPI/SYSTEM ломает чекбокс). Не гоняет параллельные 1cv8 по одной базе.</p>
+    </div>
+    <div class="card">
+      <h3>Агент делает</h3>
+      <p>Собирает cmdline DESIGNER/ENTERPRISE, COM к ИБ, COM к кластеру (регзадания), ждёт cond-функции БСП, режет только процессы этой ИБ (Srvr+Ref, в т.ч. <code>/S"servsql/ref"</code>).</p>
+    </div>
+  </div>
+
+  <h2>Поток на один прогон</h2>
+  <div class="pipe">
+    <div class="step"><div class="n">1</div><h3>Вход</h3><p>Srvr, Ref, пользователь 1С. Платформа 8.3.27.2214.</p></div>
+    <div class="step"><div class="n">2</div><h3>Идентификация</h3><p>V83.COMConnector → Метаданные.Имя / Версия. DumpConfigToFiles не используем (зависает).</p></div>
+    <div class="step"><div class="n">3</div><h3>Цепочка CFU</h3><p>От текущей до последнего в каталоге по 1cv8upd.htm (from-versions). Не «любой cfu из папки».</p></div>
+    <div class="step"><div class="n">4</div><h3>Цикл шагов</h3><p>На каждый CFU: DESIGNER, затем ENTERPRISE. См. ниже.</p></div>
+    <div class="step"><div class="n">5</div><h3>Контроль</h3><p>Снова COM: финальная Версия. Закрыть 1cv8 только этой ИБ.</p></div>
+  </div>
+
+  <h2>Один шаг CFU (ядро)</h2>
+  <pre>ScheduledJobsDenied = True          // иначе ФЗ держат исключительную блокировку
+DESIGNER /S Srvr\Ref /N /P
+  /UpdateCfg "&lt;file.cfu&gt;"
+  /UpdateDBCfg -Server
+  // ArgumentList через ProcessStartInfo.Arguments — иначе /UpdateCfg теряется
+ScheduledJobsDenied = False         // иначе отложенные обработчики не стартуют
+COM: ЗаписатьПодтверждениеЛегальностиПолученияОбновлений
+ENTERPRISE /C ЗапуститьОбновлениеИнформационнойБазы
+wait COM:
+  НЕ НеобходимоОбновлениеИнформационнойБазы()
+  И ОтложенноеОбновлениеЗавершено()
+Stop-ThisIB                         // cmdline содержит и Srvr, и Ref</pre>
+  <p>Легальность UI ненадёжна (сессия под SYSTEM / PsExec <code>-s -i 2</code>). Отложенное обновление нельзя считать успешным по idle процесса: окно «Обновление версии приложения» ещё крутится.</p>
+
+  <h2>Почему цепочка, а не один CFU</h2>
+  <p>Файл обновления принимает только перечисленные в нём from-версии. Пример БП 14.09.2026, <code>agashin_zup_copy</code> (в Ref лежала БП после смены конфигурации): прямой 195.40→205.17 даёт «файл не содержит доступных обновлений». Факт:</p>
+  <table>
+    <tr><th>CFU</th><th>Интервал</th><th>Мин</th><th>Замечание</th></tr>
+    <tr><td>3.0.196.21</td><td>11:41–11:51</td><td>10</td><td></td></tr>
+    <tr><td>3.0.200.23</td><td>11:51–12:12</td><td>21</td><td></td></tr>
+    <tr><td>3.0.205.17</td><td>12:12–12:35</td><td>23</td><td>конфликт с EF_188 — DeleteCfg, повтор</td></tr>
+    <tr><td>3.0.206.19</td><td>12:35–12:50</td><td>15</td><td>последний Accounting30 на дату</td></tr>
+    <tr><td colspan="2">Итого скрипта</td><td>71</td><td>отложенные после этого ещё догонялись в предприятии</td></tr>
+  </table>
+  <p>ЗУП 3.1.38.69→92 тот же день: один hop, 9 мин. Пакеты: <code>D:\Обновления\</code>, шаблоны <code>C:\zup_tmplts</code> / <code>C:\bp_tmplts</code> (CFU из setup иногда оседают в SysWOW64\systemprofile — копируем в Tmplts).</p>
+
+  <h2>Инварианты, которые ломали прогон</h2>
+  <table>
+    <tr><th>Симптом</th><th>Причина</th><th>Фикс в скрипте</th></tr>
+    <tr><td>UpdateCfg «не применился»</td><td>Start-Process -ArgumentList съел /UpdateCfg</td><td>ProcessStartInfo, Arguments одной строкой</td></tr>
+    <tr><td>Конфиг не узнали</td><td>DumpConfigToFiles hang; COM $ib.$Meta пустой</td><td>InvokeMember GetProperty на Метаданные</td></tr>
+    <tr><td>Легальность</td><td>UI под SYSTEM</td><td>COM ЗаписатьПодтверждение…</td></tr>
+    <tr><td>Exclusive lock session ФЗ</td><td>регзадания в DESIGNER</td><td>Denied только вокруг UpdateCfg</td></tr>
+    <tr><td>Обработчики 6% и стоп</td><td>ждали idle, потом Kill</td><td>wait COM NeedUpdate/DeferredDone</td></tr>
+    <tr><td>Чужие окна 1С</td><td>kill по имени 1cv8</td><td>фильтр cmdline Srvr+Ref (слэш в /S)</td></tr>
+    <tr><td>Кириллица в -match</td><td>ломает парсер ps1</td><td>U() char-codes, файл ASCII</td></tr>
+  </table>
+
+  <h2>Где это лежит</h2>
+  <p>Скрипт: <code>update_1c_universal.ps1</code> → <code>\\192.168.80.15\C$\temp\</code>. Запуск на сервере (PsExec). Один сеанс 1cv8 на ИБ. Timeout шага до 6 ч. Бэкап по умолчанию, <code>-SkipBackup</code> на копиях.</p>
+  <div class="note">MCP (<code>user-rsv-data</code> / depo_copy2) — другой контур: чтение метаданных и запросов, модули в ИБ не пишет. Путать с обновлением CFU нельзя.</div>
+  <p class="cap">Источник: прогоны 14.09.2026, платформа 8.3.27.2214 · схема для программистов 1С, не для бизнес-пользователей.</p>
+</main>
+</body>
+</html>
